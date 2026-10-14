@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gorilla Cage — Investment Game</title>
+<meta name="description" content="Gorilla Cage: a minimalist business investment game powered by Grade 9 CBSE mathematics." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23101010'/%3E%3Cpath d='M7 13c0-4.4 2.9-7 9-7s9 2.6 9 7v3c0 4.4-2.9 7-9 7s-9-2.6-9-7v-3z' fill='none' stroke='%23c8ff4d' stroke-width='2.5'/%3E%3Ccircle cx='12' cy='14' r='2' fill='%23c8ff4d'/%3E%3Ccircle cx='20' cy='14' r='2' fill='%23c8ff4d'/%3E%3Cpath d='M12 19c1.4 1 3 1.5 4 1.5s2.6-.5 4-1.5' fill='none' stroke='%23c8ff4d' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+/* ============================================================
+   GORILLA CAGE — design tokens
+   Dark charcoal base, white text, single neon-green accent.
+   ============================================================ */
+:root{
+  --bg:#0c0d0d;
+  --surface:#131415;
+  --surface-2:#181a1b;
+  --surface-3:#1e2021;
+  --border:rgba(255,255,255,.10);
+  --border-strong:rgba(255,255,255,.18);
+  --text:#f2f3f1;
+  --text-muted:#8b8f8a;
+  --text-faint:#8a8e89;
+  --accent:#c8ff4d;
+  --accent-dim:rgba(200,255,77,.14);
+  --accent-border:rgba(200,255,77,.35);
+  --danger:#ff6b6b;
+  --danger-dim:rgba(255,107,107,.12);
+  --warn:#ffc861;
+  --warn-dim:rgba(255,200,97,.12);
+  --radius:12px;
+  --radius-sm:8px;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;
+  --space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;
+  --font-display:'Archivo',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --transition:180ms cubic-bezier(.16,1,.3,1);
+  --content:1080px;
+  --content-narrow:720px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:none;text-rendering:optimizeLegibility;scroll-behavior:smooth}
+body{
+  min-height:100dvh;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:15px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+img,svg{display:block;max-width:100%}
+button{cursor:pointer;background:none;border:none;color:inherit;font:inherit;transition:color var(--transition),background var(--transition),border-color var(--transition),box-shadow var(--transition),opacity var(--transition)}
+input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+::selection{background:rgba(200,255,77,.25)}
+
+/* ---------- typography helpers ---------- */
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums lining-nums}
+.muted{color:var(--text-muted)}
+.faint{color:var(--text-faint)}
+.pos{color:var(--accent)}
+.neg{color:var(--danger)}
+.warn{color:var(--warn)}
+.center{text-align:center}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- app shell ---------- */
+#app{max-width:var(--content);margin:0 auto;padding:var(--space-5) var(--space-5) calc(var(--space-10) + env(safe-area-inset-bottom))}
+@media(min-width:720px){#app{padding:var(--space-8) var(--space-8) var(--space-12)}}
+
+/* top bar shown during a run */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-6);flex-wrap:wrap}
+.topbar .brand{display:flex;align-items:center;gap:var(--space-3);cursor:pointer;padding:var(--space-1);border-radius:var(--radius-sm)}
+.topbar .brand:hover .logo-mark{border-color:var(--accent-border)}
+.topbar .brand .name{font-family:var(--font-display);font-weight:800;letter-spacing:.06em;font-size:15px}
+.topbar .brand .name em{font-style:normal;color:var(--accent)}
+.top-stats{display:flex;gap:var(--space-3);flex-wrap:wrap}
+.stat-chip{
+  display:flex;flex-direction:column;gap:2px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:var(--space-2) var(--space-3);min-width:96px;
+}
+.stat-chip .lbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint)}
+.stat-chip .val{font-family:var(--font-mono);font-weight:600;font-size:14px}
+.icon-btn{display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-muted)}
+.icon-btn:hover{color:var(--text);border-color:var(--border-strong)}
+
+/* ---------- screens ---------- */
+.screen{display:none;animation:fadeUp 320ms cubic-bezier(.16,1,.3,1)}
+.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.screen{animation:none}}
+
+/* ---------- main menu ---------- */
+.menu{max-width:560px;margin:0 auto;padding-top:clamp(var(--space-8),10vh,var(--space-16));text-align:center}
+.logo-mark{width:64px;height:64px;margin:0 auto var(--space-5);border:1.5px solid var(--accent-border);border-radius:var(--radius);display:grid;place-items:center;color:var(--accent);background:var(--surface)}
+.logo-mark svg{width:36px;height:36px}
+.menu h1{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(2.4rem,8vw,4rem);line-height:1.02;letter-spacing:.02em;
+}
+.menu h1 .accent{color:var(--accent)}
+.menu .tag{margin-top:var(--space-3);color:var(--text-muted);font-size:14px;max-width:44ch;margin-inline:auto}
+.menu .menu-actions{display:grid;gap:var(--space-3);margin-top:var(--space-8)}
+.menu .hs-row{margin-top:var(--space-6);font-size:13px;color:var(--text-muted)}
+.menu .hs-row b{color:var(--text);font-family:var(--font-mono)}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);
+  padding:13px var(--space-5);border-radius:var(--radius-sm);
+  font-weight:600;font-size:14px;letter-spacing:.02em;
+  border:1px solid var(--border-strong);color:var(--text);background:var(--surface-2);
+}
+.btn:hover{border-color:rgba(255,255,255,.34);background:var(--surface-3)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#0c0d0d}
+.btn.primary:hover{background:#d6ff75;border-color:#d6ff75}
+.btn.ghost{background:transparent;border-color:var(--border)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:9px var(--space-4);font-size:13px}
+
+/* ---------- cards / panels ---------- */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-5)}
+.card + .card{margin-top:var(--space-4)}
+.card .card-title{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-faint);margin-bottom:var(--space-4)}
+.subhead{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:.01em}
+.subhead + p{margin-top:var(--space-2)}
+
+/* ---------- pitch screen ---------- */
+.pitch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-5)}
+.pitch-head .who{display:flex;align-items:center;gap:var(--space-4)}
+.avatar{
+  width:52px;height:52px;border-radius:50%;flex:none;
+  display:grid;place-items:center;font-weight:700;font-size:18px;
+  background:var(--surface-3);border:1px solid var(--border-strong);color:var(--accent);
+  font-family:var(--font-display);
+}
+.pitch-head .names h2{font-family:var(--font-display);font-weight:800;font-size:clamp(20px,3vw,26px);line-height:1.15}
+.pitch-head .names .founder{color:var(--text-muted);font-size:13px;margin-top:2px}
+.pitch-badges{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 10px;border-radius:999px;border:1px solid var(--border-strong);color:var(--text-muted);
+}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:var(--text-faint)}
+.badge.low .dot{background:var(--accent)}
+.badge.med .dot{background:var(--warn)}
+.badge.high .dot{background:var(--danger)}
+.badge.low{color:var(--accent);border-color:var(--accent-border)}
+.badge.med{color:var(--warn);border-color:rgba(255,200,97,.35)}
+.badge.high{color:var(--danger);border-color:rgba(255,107,107,.35)}
+.pitch-desc{color:var(--text-muted);font-size:14.5px;max-width:70ch;margin-bottom:var(--space-5)}
+
+/* financial dashboard grid */
+.fingrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(150px,100%),1fr));gap:var(--space-3)}
+.fin{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:var(--space-3) var(--space-4)}
+.fin .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint)}
+.fin .v{font-family:var(--font-mono);font-weight:600;font-size:clamp(15px,2vw,18px);margin-top:3px}
+.fin .v .unit{font-size:11px;color:var(--text-muted);margin-left:2px}
+.fin.hero{border-color:var(--accent-border);background:linear-gradient(180deg,var(--accent-dim),transparent 130%),var(--surface)}
+.fin.hero .v{color:var(--accent)}
+
+/* analysis strip */
+.analysis{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-4)}
+.pill{font-size:12px;padding:7px 11px;border-radius:999px;border:1px solid var(--border);color:var(--text-muted);background:var(--surface)}
+.pill b{color:var(--text);font-family:var(--font-mono);font-weight:600}
+.pill.good{border-color:var(--accent-border);color:var(--accent)}
+.pill.warn{border-color:rgba(255,200,97,.35);color:var(--warn)}
+.pill.bad{border-color:rgba(255,107,107,.35);color:var(--danger)}
+
+/* scenario table */
+.scenarios{width:100%;border-collapse:collapse;font-size:13px}
+.scenarios th{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.scenarios td{padding:9px 8px;border-bottom:1px solid var(--border)}
+.scenarios tr:last-child td{border-bottom:none}
+.scenarios td.num{font-family:var(--font-mono)}
+.disclaimer{font-size:12px;color:#9a9e99;margin-top:var(--space-3)}
+
+/* actions */
+.actions{display:grid;grid-template-columns:1fr;gap:var(--space-3);margin-top:var(--space-6)}
+@media(min-width:640px){.actions{grid-template-columns:repeat(3,1fr)}}
+.btn.invest{border-color:var(--accent-border);color:var(--accent);background:var(--accent-dim)}
+.btn.invest:hover{background:rgba(200,255,77,.22)}
+.btn.reject{border-color:rgba(255,107,107,.4);color:var(--danger);background:var(--danger-dim)}
+.btn.reject:hover{background:rgba(255,107,107,.2)}
+.btn.negotiate{border-color:var(--border-strong)}
+
+/* ---------- math panel ---------- */
+.mathcard{border-color:var(--accent-border)}
+.math-q{font-size:15px;margin-top:var(--space-2)}
+.math-q b{color:var(--accent);font-family:var(--font-mono)}
+.math-choices{display:grid;gap:var(--space-2);margin-top:var(--space-4)}
+.choice{
+  text-align:left;padding:12px var(--space-4);border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--surface-2);font-size:14px;
+  display:flex;align-items:center;gap:var(--space-3);
+}
+.choice:hover{border-color:var(--border-strong)}
+.choice .key{
+  font-family:var(--font-mono);font-size:11px;font-weight:700;flex:none;
+  width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+  background:var(--surface-3);border:1px solid var(--border-strong);color:var(--text-muted);
+}
+.choice.correct{border-color:var(--accent);background:var(--accent-dim)}
+.choice.correct .key{background:var(--accent);color:#0c0d0d;border-color:var(--accent)}
+.choice.wrong{border-color:rgba(255,107,107,.6);background:var(--danger-dim)}
+.choice:disabled{cursor:default}
+.math-feedback{margin-top:var(--space-4);font-size:13.5px;display:none;border-radius:var(--radius-sm);padding:var(--space-3) var(--space-4);border:1px solid var(--border)}
+.math-feedback.show{display:block}
+.math-feedback.ok{border-color:var(--accent-border);background:var(--accent-dim);color:var(--text)}
+.math-feedback.no{border-color:rgba(255,107,107,.4);background:var(--danger-dim)}
+.math-feedback .verdict{font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.math-feedback.ok .verdict{color:var(--accent)}
+.math-feedback.no .verdict{color:var(--danger)}
+.math-feedback .explain{color:var(--text-muted);margin-top:6px}
+.math-feedback .points{font-family:var(--font-mono);font-weight:600}
+.btn-hint{color:var(--text-muted);font-size:12.5px;margin-top:var(--space-3);padding:6px 0}
+.btn-hint:hover{color:var(--accent)}
+.hintbox{display:none;margin-top:var(--space-3);font-size:13px;color:var(--text-muted);border-left:2px solid var(--accent-border);padding-left:var(--space-3)}
+.hintbox.show{display:block}
+
+/* ---------- negotiation ---------- */
+.nego-grid{display:grid;gap:var(--space-4)}
+@media(min-width:560px){.nego-grid{grid-template-columns:1fr 1fr}}
+.field label{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);margin-bottom:7px}
+.field .wrap{position:relative}
+.field .wrap .prefix{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-faint);font-family:var(--font-mono);font-size:14px}
+.field input{
+  width:100%;padding:12px 12px 12px 30px;border-radius:var(--radius-sm);
+  background:var(--surface-2);border:1px solid var(--border-strong);color:var(--text);
+  font-family:var(--font-mono);font-size:15px;
+}
+.field input.pct{padding-left:34px}
+.field input:focus{outline:none;border-color:var(--accent)}
+.field .err{color:var(--danger);font-size:12px;margin-top:6px;min-height:16px}
+.nego-live{
+  background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:var(--radius-sm);
+  padding:var(--space-3) var(--space-4);font-size:13px;color:var(--text-muted);margin-top:var(--space-2);
+}
+.nego-live b{color:var(--text);font-family:var(--font-mono)}
+.nego-note{font-size:12.5px;color:var(--text-faint);margin-top:var(--space-3)}
+.nego-verdict{display:none;margin-top:var(--space-4);padding:var(--space-4);border-radius:var(--radius-sm);font-size:13.5px}
+.nego-verdict.show{display:block}
+.nego-verdict.ok{border:1px solid var(--accent-border);background:var(--accent-dim)}
+.nego-verdict.no{border:1px solid rgba(255,107,107,.4);background:var(--danger-dim)}
+
+/* ---------- outcome ---------- */
+.outcome-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  padding:7px 12px;border-radius:999px;margin-bottom:var(--space-4);
+}
+.outcome-tag.win{color:var(--accent);border:1px solid var(--accent-border);background:var(--accent-dim)}
+.outcome-tag.loss{color:var(--danger);border:1px solid rgba(255,107,107,.4);background:var(--danger-dim)}
+.outcome-tag.pass{color:var(--warn);border:1px solid rgba(255,200,97,.4);background:var(--warn-dim)}
+.outcome-num{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,5vw,40px);margin-top:var(--space-2)}
+.outcome-body{color:#e6e8e4;font-size:14.5px;margin-top:var(--space-3);line-height:1.65}
+.outcome-body b{color:var(--accent)}
+.outcome-body .verdict-note{color:#d9dcd7;font-size:13.5px}
+.ledger{width:100%;border-collapse:collapse;font-size:13px;margin-top:var(--space-4)}
+.ledger td{padding:7px 0;border-bottom:1px solid var(--border);color:var(--text)}
+.ledger td:first-child{color:#b9bdb8}
+.ledger-lbl{color:#b9bdb8}
+.ledger td:last-child{text-align:right;font-family:var(--font-mono);font-weight:600}
+.ledger tr:last-child td{border-bottom:none}
+
+/* ---------- portfolio ---------- */
+.port-summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(150px,100%),1fr));gap:var(--space-3);margin-bottom:var(--space-5)}
+.hold-table{width:100%;border-collapse:collapse;font-size:13px}
+.hold-table th{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.hold-table td{padding:10px 8px;border-bottom:1px solid var(--border)}
+.hold-table tr:last-child td{border-bottom:none}
+.hold-table td.num{font-family:var(--font-mono)}
+.hold-table .bus{font-weight:600}
+.empty-note{color:var(--text-faint);font-size:13px;padding:var(--space-2) 0}
+
+/* ---------- end screen ---------- */
+.end-wrap{max-width:640px;margin:0 auto;padding-top:clamp(var(--space-6),6vh,var(--space-10))}
+.end-head{font-family:var(--font-display);font-weight:800;font-size:clamp(26px,5vw,36px)}
+.end-sub{color:var(--text-muted);margin-top:var(--space-2);font-size:14px}
+.end-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr));gap:var(--space-3);margin-top:var(--space-6)}
+.end-best{margin-top:var(--space-5)}
+.bestworst{display:grid;gap:var(--space-3)}
+@media(min-width:560px){.bestworst{grid-template-columns:1fr 1fr}}
+.bw{border-radius:var(--radius-sm);padding:var(--space-4);border:1px solid var(--border);background:var(--surface)}
+.bw .t{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);margin-bottom:6px}
+.bw .n{font-weight:600;font-size:14px}
+.bw .r{font-family:var(--font-mono);font-weight:700;margin-top:4px}
+.bw.best .r{color:var(--accent)}
+.bw.worst .r{color:var(--danger)}
+.new-hs{margin-top:var(--space-5);padding:var(--space-4);border:1px solid var(--accent-border);background:var(--accent-dim);border-radius:var(--radius-sm);font-size:14px;display:none}
+.new-hs.show{display:block}
+
+/* ---------- help / topics ---------- */
+.help-wrap{max-width:640px;margin:0 auto}
+.back-row{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-6)}
+.topic-item{display:flex;gap:var(--space-4);padding:var(--space-4) 0;border-bottom:1px solid var(--border)}
+.topic-item:last-child{border-bottom:none}
+.topic-item .idx{font-family:var(--font-mono);font-size:12px;color:var(--accent);flex:none;padding-top:2px}
+.topic-item h3{font-family:var(--font-display);font-weight:700;font-size:15px}
+.topic-item p{color:var(--text-muted);font-size:13.5px;margin-top:3px}
+.formula{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;display:inline-block;margin-top:8px}
+.help ol,.help ul{padding-left:20px;color:var(--text-muted);font-size:14px;display:grid;gap:8px;margin-top:var(--space-3)}
+.help li b{color:var(--text)}
+.hs-table{width:100%;border-collapse:collapse;font-size:13px}
+.hs-table td{padding:9px 0;border-bottom:1px solid var(--border)}
+.hs-table td:last-child{text-align:right;font-family:var(--font-mono);font-weight:600}
+.hs-table tr:last-child td{border-bottom:none}
+
+/* ---------- toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:calc(var(--space-6) + env(safe-area-inset-bottom));transform:translate(-50%,20px);
+  background:var(--surface-3);border:1px solid var(--border-strong);border-radius:10px;
+  padding:11px var(--space-4);font-size:13px;max-width:min(92vw,420px);
+  opacity:0;pointer-events:none;transition:opacity 220ms ease,transform 220ms ease;z-index:50;
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast.err{border-color:rgba(255,107,107,.5)}
+
+/* util */
+.mt{margin-top:var(--space-4)}.mt2{margin-top:var(--space-6)}
+.gap{display:grid;gap:var(--space-3)}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ================= TOP BAR (visible during a run) ================= -->
+  <header class="topbar" id="topbar" style="display:none">
+    <button class="brand" id="brand-open-portfolio" title="Portfolio" aria-label="Open portfolio">
+      <span class="logo-mark" style="width:34px;height:34px;margin:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
+          <path d="M5 10c0-3.3 2.2-5 7-5s7 1.7 7 5v2.5c0 3.3-2.2 5-7 5s-7-1.7-7-5V10z"/>
+          <circle cx="9.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11" r="1" fill="currentColor" stroke="none"/>
+          <path d="M9.5 14c1 .8 2.1 1.1 2.5 1.1s1.5-.3 2.5-1.1" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="name">GORILLA<em>CAGE</em></span>
+    </button>
+    <div class="top-stats">
+      <div class="stat-chip"><span class="lbl">Cash</span><span class="val" id="hud-cash">—</span></div>
+      <div class="stat-chip"><span class="lbl">Net Worth</span><span class="val" id="hud-net">—</span></div>
+      <div class="stat-chip"><span class="lbl">Pitch</span><span class="val" id="hud-pitch">—</span></div>
+      <button class="icon-btn" data-nav="menu" title="Main menu" aria-label="Back to main menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6 6 18M6 6l12 12" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN MENU ================= -->
+  <section class="screen active" id="screen-menu">
+    <div class="menu">
+      <div class="logo-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M5 10c0-3.3 2.2-5 7-5s7 1.7 7 5v2.5c0 3.3-2.2 5-7 5s-7-1.7-7-5V10z"/>
+          <circle cx="9.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11" r="1" fill="currentColor" stroke="none"/>
+          <path d="M9.5 14c1 .8 2.1 1.1 2.5 1.1s1.5-.3 2.5-1.1" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1 class="menu-h1">GORILLA <span class="accent">CAGE</span></h1>
+      <p class="tag">You are the Gorilla. Entrepreneurs enter the cage with a pitch, a plan and a price. Read the numbers, do the math, take the deal — or send them home.</p>
+      <div class="menu-actions">
+        <button class="btn primary block" data-nav="start">Enter the Cage</button>
+        <button class="btn ghost block" data-nav="how">How to Play</button>
+        <div class="row-between" style="gap:10px">
+          <button class="btn ghost block" data-nav="topics">Math Topics</button>
+          <button class="btn ghost block" data-nav="highscore">High Score</button>
+        </div>
+      </div>
+      <p class="hs-row" id="menu-hs"></p>
+    </div>
+  </section>
+
+  <!-- ================= HOW TO PLAY ================= -->
+  <section class="screen" id="screen-how">
+    <div class="help-wrap help">
+      <div class="back-row"><button class="btn ghost sm" data-nav="menu">← Menu</button></div>
+      <h2 class="subhead">How to Play</h2>
+      <ol>
+        <li>You start with <b>₹50,00,000</b> of fictional capital. 12 entrepreneurs will pitch to you, one at a time, in random order.</li>
+        <li>Before every decision, a <b>Math Check</b> appears — a short CBSE Class 9 question based on that pitch. Solve it to unlock the Invest / Negotiate / Reject buttons. Correct answers earn bonus points; wrong answers lose a few, but you can retry with hints.</li>
+        <li><b>Invest</b>: pay the asked amount for the offered equity. <b>Negotiate</b>: counter with your own amount and equity — the founder has hidden limits. <b>Reject</b>: walk away.</li>
+        <li>Each pitch has a <b>success probability</b>. A coin is weighted by that probability to decide whether the business thrives or struggles — but your decision score rewards evidence-based thinking, not luck.</li>
+        <li>Game over after 12 pitches: see net worth, best and worst deals, and your two scores. High scores are saved on this device.</li>
+      </ol>
+      <h2 class="subhead mt2">Reading a Pitch</h2>
+      <ul>
+        <li><b>Turnover</b> is annual revenue; <b>Expenses</b> are annual costs; profit is their difference.</li>
+        <li><b>Profit margin</b> = Profit ÷ Turnover × 100. Above ~12% is healthy for most fictional businesses here.</li>
+        <li><b>Implied valuation</b> = Investment ÷ (Equity ÷ 100). Compare it to the business's realistic value — overpaying for equity costs you points and money.</li>
+        <li><b>Payback period</b> = Investment ÷ your share of annual profit. Shorter is safer.</li>
+      </ul>
+      <p class="disclaimer">All businesses, founders and figures are fictional. Growth figures are estimates, not guarantees.</p>
+    </div>
+  </section>
+
+  <!-- ================= MATH TOPICS ================= -->
+  <section class="screen" id="screen-topics">
+    <div class="help-wrap">
+      <div class="back-row"><button class="btn ghost sm" data-nav="menu">← Menu</button></div>
+      <h2 class="subhead">Mathematics Topics</h2>
+      <p class="muted" style="font-size:14px;margin-top:6px">Every topic below appears inside the gameplay — the math is the game.</p>
+      <div class="card mt">
+        <div class="topic-item"><span class="idx">01</span><div><h3>Percentages & Profit/Loss</h3><p>Profit, profit percentage on expenses, profit margin on turnover, percentage change in turnover.</p><span class="formula">Profit % = (Profit ÷ Expenses) × 100</span></div></div>
+        <div class="topic-item"><span class="idx">02</span><div><h3>Linear Equations in Two Variables</h3><p>Revenue and expenses modelled as linear equations in units sold x — find the units needed for a target profit.</p><span class="formula">Revenue = 500x, Expenses = 200x + 3000</span></div></div>
+        <div class="topic-item"><span class="idx">03</span><div><h3>Statistics</h3><p>Mean turnover, median profit, range, and comparison of profit margins across the businesses you've seen.</p><span class="formula">Mean = Σx ÷ n</span></div></div>
+        <div class="topic-item"><span class="idx">04</span><div><h3>Probability</h3><p>Success/decline probabilities shown per pitch; expected value of an investment = Σ(outcome × probability).</p><span class="formula">P(success) + P(decline) = 1</span></div></div>
+        <div class="topic-item"><span class="idx">05</span><div><h3>Number Systems</h3><p>Rational numbers, decimals and money arithmetic with sensible rounding — exact rupee calculations.</p><span class="formula">₹1,20,000 = 1.2 × 10⁵</span></div></div>
+        <div class="topic-item"><span class="idx">06</span><div><h3>Coordinate Geometry</h3><p>A scatter graph of turnover (x-axis) vs profit (y-axis). Businesses in the upper region combine high turnover with high profit.</p><span class="formula">Point (turnover, profit)</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HIGH SCORE ================= -->
+  <section class="screen" id="screen-highscore">
+    <div class="help-wrap">
+      <div class="back-row"><button class="btn ghost sm" data-nav="menu">← Menu</button></div>
+      <h2 class="subhead">High Scores</h2>
+      <p class="muted" style="font-size:14px;margin-top:6px">Your best runs, saved on this device.</p>
+      <div class="card mt" id="hs-list"></div>
+    </div>
+  </section>
+
+  <!-- ================= PITCH ================= -->
+  <section class="screen" id="screen-pitch">
+    <div class="pitch-head">
+      <div class="who">
+        <div class="avatar" id="pitch-avatar">A</div>
+        <div class="names">
+          <h2 id="pitch-bus">Business</h2>
+          <div class="founder" id="pitch-founder">Founder</div>
+        </div>
+      </div>
+      <div class="pitch-badges" id="pitch-badges"></div>
+    </div>
+    <p class="pitch-desc" id="pitch-desc"></p>
+
+    <div class="fingrid" id="pitch-fins"></div>
+    <div class="analysis" id="pitch-analysis"></div>
+
+    <!-- coordinate geometry mini-graph -->
+    <div class="card mt">
+      <div class="card-title">Turnover vs Profit — Position on Graph</div>
+      <div id="graph-mount"></div>
+    </div>
+
+    <!-- math check -->
+    <div class="card mathcard mt" id="math-card">
+      <div class="row-between">
+        <div class="card-title" style="margin:0">Math Check — Unlock Your Decision</div>
+        <span class="badge" id="math-topic-badge">Topic</span>
+      </div>
+      <p class="math-q" id="math-q"></p>
+      <div class="math-choices" id="math-choices"></div>
+      <div class="math-feedback" id="math-feedback"></div>
+      <button class="btn-hint" id="math-hint-btn">Need a hint?</button>
+      <div class="hintbox" id="math-hint"></div>
+    </div>
+
+    <div class="actions" id="pitch-actions">
+      <button class="btn invest" id="btn-invest">Invest</button>
+      <button class="btn negotiate" id="btn-negotiate">Negotiate</button>
+      <button class="btn reject" id="btn-reject">Reject</button>
+    </div>
+  </section>
+
+  <!-- ================= NEGOTIATION ================= -->
+  <section class="screen" id="screen-nego">
+    <div class="help-wrap">
+      <div class="back-row"><button class="btn ghost sm" id="nego-back">← Back to Pitch</button></div>
+      <h2 class="subhead" id="nego-title">Counter-Offer</h2>
+      <p class="muted" style="font-size:14px;margin-top:6px" id="nego-sub"></p>
+      <div class="card mt">
+        <div class="nego-grid">
+          <div class="field">
+            <label for="nego-amt">Your Investment (₹)</label>
+            <div class="wrap"><span class="prefix">₹</span><input id="nego-amt" type="text" inputmode="numeric" placeholder="e.g. 800000" autocomplete="off"></div>
+            <div class="err" id="nego-amt-err"></div>
+          </div>
+          <div class="field">
+            <label for="nego-eq">Equity You Want (%)</label>
+            <div class="wrap"><span class="prefix">%</span><input id="nego-eq" class="pct" type="text" inputmode="decimal" placeholder="e.g. 15" autocomplete="off"></div>
+            <div class="err" id="nego-eq-err"></div>
+          </div>
+        </div>
+        <div class="nego-live" id="nego-live"></div>
+        <div class="nego-verdict" id="nego-verdict"></div>
+        <p class="nego-note">Founders have hidden limits: they rarely accept a deal that values the business far below their expectation, or gives away too much equity for too little money. The implied valuation updates as you type.</p>
+        <div class="gap mt2">
+          <button class="btn primary block" id="nego-send">Send Counter-Offer</button>
+          <button class="btn ghost block" id="nego-giveup">Walk Away (Reject)</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= OUTCOME ================= -->
+  <section class="screen" id="screen-outcome">
+    <div class="end-wrap">
+      <div id="outcome-tag" class="outcome-tag">Outcome</div>
+      <h2 class="end-head" id="outcome-head">Result</h2>
+      <div class="outcome-num" id="outcome-num">₹0</div>
+      <p class="outcome-body" id="outcome-body"></p>
+      <table class="ledger" id="outcome-ledger"></table>
+      <div class="gap mt2">
+        <button class="btn primary block" id="outcome-next">Next Entrepreneur →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PORTFOLIO ================= -->
+  <section class="screen" id="screen-portfolio">
+    <div class="help-wrap">
+      <div class="back-row"><button class="btn ghost sm" id="port-back">← Back</button></div>
+      <h2 class="subhead">Portfolio</h2>
+      <div class="port-summary" id="port-summary"></div>
+      <div class="card">
+        <div class="card-title">Holdings</div>
+        <div id="port-holdings"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Businesses Seen So Far — Statistics</div>
+        <div id="port-stats"></div>
+      </div>
+      <button class="btn primary block mt2" id="port-continue">Continue</button>
+    </div>
+  </section>
+
+  <!-- ================= END ================= -->
+  <section class="screen" id="screen-end">
+    <div class="end-wrap">
+      <h2 class="end-head" id="end-head">The Cage Is Empty</h2>
+      <p class="end-sub" id="end-sub"></p>
+      <div class="end-stats" id="end-stats"></div>
+      <div class="new-hs" id="end-newhs"></div>
+      <h3 class="subhead end-best">Deals Review</h3>
+      <div class="bestworst" id="end-bw"></div>
+      <div class="gap mt2">
+        <button class="btn primary block" id="end-restart">Play Again</button>
+        <button class="btn ghost block" data-nav="menu">Main Menu</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ================================================================
+   GORILLA CAGE — game logic
+   Sections:
+   1. Utilities & math functions (reusable, testable)
+   2. Business pitch data (fictional)
+   3. Math question generators (CBSE Grade 9)
+   4. Game state
+   5. Screens & rendering
+   6. Decision engine (invest / negotiate / reject + outcomes)
+   7. Scoring
+   8. High scores (localStorage, guarded)
+   ================================================================ */
+
+/* ---------------- 1. Utilities & math ---------------- */
+const $ = (id) => document.getElementById(id);
+
+// Indian grouping number format: 12,34,567
+function inrFmt(n) {
+  const neg = n < 0; const abs = Math.abs(Math.round(n));
+  let s = String(abs), last3 = s.slice(-3), rest = s.slice(0, -3);
+  if (rest) last3 = "," + last3;
+  const grouped = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + last3;
+  return (neg ? "−₹" : "₹") + grouped;
+}
+const pctFmt = (n, d = 1) => n.toFixed(d) + "%";
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const round1 = (n) => Math.round(n * 10) / 10;
+const round2 = (n) => Math.round(n * 100) / 100;
+
+/** shuffle (Fisher-Yates) — returns a new array */
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* --- core financial formulas (Grade 9 CBSE) --- */
+const fin = {
+  profit: (turnover, expenses) => turnover - expenses,
+  profitPctOnExpenses: (profit, expenses) => (profit / expenses) * 100,
+  profitMargin: (profit, turnover) => (profit / turnover) * 100, // margin on turnover
+  impliedValuation: (investment, equityPct) => investment / (equityPct / 100),
+  investVsTurnoverPct: (investment, turnover) => (investment / turnover) * 100,
+  paybackYears: (investment, equityPct, profit) => {
+    const share = profit * (equityPct / 100);
+    return share > 0 ? investment / share : Infinity;
+  },
+  equityValue: (valuation, equityPct) => valuation * (equityPct / 100),
+  roiPct: (current, invested) => ((current - invested) / invested) * 100,
+  mean: (a) => a.reduce((s, v) => s + v, 0) / a.length,
+  median: (a) => {
+    const s = a.slice().sort((x, y) => x - y);
+    const m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  },
+};
+
+/* ---------------- 2. Pitch data (fictional) ----------------
+   All figures are invented for gameplay. Growth figures are
+   estimates, not guarantees. Payback uses the share of profit. */
+const PITCHES = [
+  {
+    id: "chai", tier: 1, founder: "Meera Joshi", business: "Chai Cycle",
+    desc: "A fleet of smart tea carts serving premium adrak chai to office parks in Pune. Repeat customers are strong, margins are healthy, and the founder wants to add 12 new carts.",
+    turnover: 4800000, expenses: 3300000, investment: 900000, equity: 12,
+    marketPotential: 18, growth: 35, pSuccess: 0.75,
+    valuationFair: 10000000, // fair business value if things go well
+    minFund: 600000, minEquityForMin: 10, maxEquityGive: 18,
+    unitModel: { price: 500, varCost: 200, fixed: 3000 },
+  },
+  {
+    id: "tiffin", tier: 1, founder: "Arjun Nair", business: "Tiffin Rocket",
+    desc: "Subscription tiffin service with a delivery app for IT workers in Bengaluru. Sticky recurring revenue, thin-but-steady margins, and a proven 40% repeat rate.",
+    turnover: 6200000, expenses: 4700000, investment: 1200000, equity: 15,
+    marketPotential: 25, growth: 30, pSuccess: 0.7,
+    valuationFair: 11000000, minFund: 900000, minEquityForMin: 12, maxEquityGive: 20,
+    unitModel: { price: 600, varCost: 300, fixed: 4500 },
+  },
+  {
+    id: "upcycle", tier: 1, founder: "Sana Sheikh", business: "LoomLoop",
+    desc: "Upcycled denim fashion brand selling through Instagram. High margin per unit, small scale, loyal audience. Needs working capital for a festive-season production run.",
+    turnover: 2600000, expenses: 1500000, investment: 600000, equity: 10,
+    marketPotential: 12, growth: 45, pSuccess: 0.65,
+    valuationFair: 8000000, minFund: 450000, minEquityForMin: 8, maxEquityGive: 16,
+    unitModel: { price: 1200, varCost: 500, fixed: 60000 },
+  },
+  {
+    id: "tutor", tier: 2, founder: "Vikram Rao", business: "Mithra Tutors",
+    desc: "Hybrid coaching for Class 9–10 students combining small online batches with weekend centres. Education spending is recession-resistant; the founder is a former teacher.",
+    turnover: 3600000, expenses: 2900000, investment: 1000000, equity: 14,
+    marketPotential: 20, growth: 25, pSuccess: 0.6,
+    valuationFair: 8500000, minFund: 700000, minEquityForMin: 11, maxEquityGive: 20,
+    unitModel: { price: 900, varCost: 400, fixed: 20000 },
+  },
+  {
+    id: "solar", tier: 2, founder: "Priya Menon", business: "SunSack",
+    desc: "Solar-powered backpacks for students and trekkers — a charging pack woven into the bag. Prototype is impressive, but hardware is capital-hungry and margins depend on scale.",
+    turnover: 1800000, expenses: 1650000, investment: 1500000, equity: 18,
+    marketPotential: 8, growth: 55, pSuccess: 0.5,
+    valuationFair: 7000000, minFund: 1100000, minEquityForMin: 14, maxEquityGive: 25,
+    unitModel: { price: 2500, varCost: 1800, fixed: 30000 },
+  },
+  {
+    id: "dairy", tier: 2, founder: "Harpreet Kaur", business: "GauGrid",
+    desc: "IoT sensors for dairy cooperatives that track milk quality at collection. Long sales cycles with cooperatives, but once installed, contracts are sticky.",
+    turnover: 4100000, expenses: 3900000, investment: 2000000, equity: 20,
+    marketPotential: 15, growth: 40, pSuccess: 0.45,
+    valuationFair: 9000000, minFund: 1400000, minEquityForMin: 15, maxEquityGive: 28,
+    unitModel: { price: 800, varCost: 500, fixed: 90000 },
+  },
+  {
+    id: "coffee", tier: 2, founder: "Daniel Fernandes", business: "Kappi Circle",
+    desc: "Specialty coffee subscription from a Coorg estate direct to homes. Brand is loved; logistics costs eat the margins. The ask funds a roasting facility to fix that.",
+    turnover: 5400000, expenses: 4600000, investment: 1600000, equity: 16,
+    marketPotential: 22, growth: 30, pSuccess: 0.65,
+    valuationFair: 9500000, minFund: 1200000, minEquityForMin: 13, maxEquityGive: 22,
+    unitModel: { price: 700, varCost: 450, fixed: 25000 },
+  },
+  {
+    id: "repair", tier: 3, founder: "Kabir Malhotra", business: "FixItFaast",
+    desc: "On-demand phone repair network in Delhi NCR. Decent unit economics, brutal competition from local shops, and the founder's numbers assume a lot of marketing spend.",
+    turnover: 7200000, expenses: 6900000, investment: 2500000, equity: 22,
+    marketPotential: 10, growth: 20, pSuccess: 0.35,
+    valuationFair: 8000000, minFund: 1800000, minEquityForMin: 18, maxEquityGive: 30,
+    unitModel: { price: 1000, varCost: 850, fixed: 10000 },
+  },
+  {
+    id: "drone", tier: 3, founder: "Ananya Iyer", business: "AgriWing",
+    desc: "Drone-based crop spraying for vineyards in Nashik. Impressive tech, regulatory uncertainty, and a market that is growing fast but is very competitive.",
+    turnover: 2200000, expenses: 2100000, investment: 3000000, equity: 25,
+    marketPotential: 30, growth: 70, pSuccess: 0.3,
+    valuationFair: 9000000, minFund: 2200000, minEquityForMin: 20, maxEquityGive: 33,
+    unitModel: { price: 3000, varCost: 2400, fixed: 60000 },
+  },
+  {
+    id: "cosmetic", tier: 3, founder: "Riya Kapoor", business: "Auraveda",
+    desc: "Ayurvedic skincare with influencer-led marketing. Sales exploded last year on viral reels; the founder's projections assume the virality continues forever.",
+    turnover: 8600000, expenses: 7900000, investment: 2800000, equity: 20,
+    marketPotential: 6, growth: 15, pSuccess: 0.4,
+    valuationFair: 10000000, minFund: 2000000, minEquityForMin: 16, maxEquityGive: 28,
+    unitModel: { price: 900, varCost: 780, fixed: 8000 },
+  },
+  {
+    id: "logistics", tier: 3, founder: "Farhan Ali", business: "LastMile Labs",
+    desc: "Electric-rickshaw delivery fleet for kirana stores in Lucknow. Unit economics currently negative; the founder insists scale fixes everything.",
+    turnover: 5000000, expenses: 5600000, investment: 3500000, equity: 30,
+    marketPotential: 26, growth: 50, pSuccess: 0.25,
+    valuationFair: 8500000, minFund: 2600000, minEquityForMin: 22, maxEquityGive: 38,
+    unitModel: { price: 450, varCost: 460, fixed: 5000 },
+  },
+  {
+    id: "saas", tier: 3, founder: "Neha Bhatt", business: "BillBharo",
+    desc: "GST invoicing software for small shops. Barely ₹3 lakh in revenue so far — a near pre-revenue bet on the founder's earlier exit and a waiting list of 4,000 shops.",
+    turnover: 300000, expenses: 1400000, investment: 2000000, equity: 20,
+    marketPotential: 18, growth: 200, pSuccess: 0.3,
+    valuationFair: 11000000, minFund: 1500000, minEquityForMin: 15, maxEquityGive: 30,
+    unitModel: { price: 1200, varCost: 200, fixed: 140000 },
+  },
+];
+const START_CASH = 5000000;
+
+/* ---------------- 3. Math questions (CBSE Grade 9) ----------------
+   Each generator returns { topic, question(html), choices[], correctIdx,
+   hint, explain }. Numbers are derived from live game data where possible. */
+
+function qProfitMargin(p) {
+  const profit = fin.profit(p.turnover, p.expenses);
+  const margin = fin.profitMargin(profit, p.turnover);
+  const wrong = [round1(margin * 2), round1(margin / 2), round1(100 - margin)];
+  return {
+    topic: "Percentages & Profit/Loss",
+    question: `${p.business} had a turnover of <b>₹${(p.turnover / 100000).toFixed(1)} lakh</b> and expenses of <b>₹${(p.expenses / 100000).toFixed(1)} lakh</b>. What is its profit margin (profit ÷ turnover × 100)?`,
+    answer: round1(margin),
+    choices: shuffleWithAnswer(round1(margin), wrong),
+    hint: "First find profit = turnover − expenses. Then margin = (profit ÷ turnover) × 100.",
+    explain: `Profit = ₹${(p.turnover / 100000).toFixed(1)}L − ₹${(p.expenses / 100000).toFixed(1)}L = ₹${(profit / 100000).toFixed(2)}L. Margin = (${(profit / 100000).toFixed(2)} ÷ ${(p.turnover / 100000).toFixed(1)}) × 100 ≈ ${round1(margin)}%.`,
+  };
+}
+function qProfitPct(p) {
+  const profit = fin.profit(p.turnover, p.expenses);
+  const onExp = fin.profitPctOnExpenses(profit, p.expenses);
+  return {
+    topic: "Percentages & Profit/Loss",
+    question: `${p.business} earns a profit of <b>₹${(profit / 100000).toFixed(2)} lakh</b> on annual expenses of <b>₹${(p.expenses / 100000).toFixed(1)} lakh</b>. What is the profit percentage <i>on expenses</i> (CBSE formula: profit ÷ expenses × 100)?`,
+    answer: round1(onExp),
+    choices: shuffleWithAnswer(round1(onExp), [round1(onExp * 2), round1(onExp / 2), round1(fin.profitMargin(profit, p.turnover))]),
+    hint: "Use the CBSE formula: Profit % = (Profit ÷ Expenses) × 100.",
+    explain: `(${(profit / 100000).toFixed(2)} ÷ ${(p.expenses / 100000).toFixed(1)}) × 100 ≈ ${round1(onExp)}%.`,
+  };
+}
+function qValuation(p) {
+  const val = fin.impliedValuation(p.investment, p.equity);
+  const valL = round1(val / 100000); // correct answer, rounded consistently with choices
+  return {
+    topic: "Percentages & Number Systems",
+    question: `${p.founder} asks for <b>₹${(p.investment / 100000).toFixed(1)} lakh</b> for <b>${p.equity}%</b> equity. What is the implied business valuation (investment ÷ equity fraction), rounded to 1 decimal place in lakh?`,
+    answer: valL, // in lakhs — same rounding as the choices
+    choices: shuffleWithAnswer(valL, [round1(val / 200000), round1(val / 50000), round1(val * 2 / 100000)]),
+    hint: `Equity fraction = ${p.equity} ÷ 100 = ${(p.equity / 100).toFixed(2)}. Valuation = investment ÷ fraction.`,
+    explain: `Valuation = ₹${(p.investment / 100000).toFixed(1)}L ÷ ${p.equity / 100} = ₹${(val / 100000).toFixed(1)} lakh.`,
+    answerIsLakhs: true,
+  };
+}
+function qLinear(p) {
+  const m = p.unitModel;
+  const contribution = m.price - m.varCost;
+  const target = 60000; // ₹60,000 monthly target profit
+  // Businesses with non-positive contribution cannot hit a positive target;
+  // fall back to a profit-margin question for them.
+  if (contribution <= 0 || (target + m.fixed) / contribution > 50000) return qProfitMargin(p);
+  const units = Math.ceil((target + m.fixed) / contribution); // minimum whole units
+  return {
+    topic: "Linear Equations in Two Variables",
+    question: `Model each unit sold as x. Revenue = <b>${m.price}x</b>; Expenses = <b>${m.varCost}x + ${m.fixed}</b>. What is the <b>minimum whole number of units</b> ${p.business} must sell to earn a profit of <b>at least ₹${target / 1000} thousand</b>? (Round up — you cannot sell a fraction of a unit.)`,
+    answer: units,
+    choices: shuffleWithAnswer(units, [units - 5 > 0 ? units - 5 : units + 5, units + 5, Math.ceil(units / 2)]),
+    hint: `Profit = Revenue − Expenses = (${m.price} − ${m.varCost})x − ${m.fixed} = ${contribution}x − ${m.fixed}. Solve ${contribution}x − ${m.fixed} ≥ ${target}, then round x up.`,
+    explain: `${contribution}x − ${m.fixed} ≥ ${target} → ${contribution}x ≥ ${target + m.fixed} → x ≥ ${(target + m.fixed) / contribution}. Rounded up, the minimum is ${units} units. Check: ${contribution} × ${units} − ${m.fixed} = ₹${(contribution * units - m.fixed).toLocaleString("en-IN")} ≥ ₹${target.toLocaleString("en-IN")}.`,
+  };
+}
+function qTurnoverChange(p) {
+  const old = p.turnover;
+  const newT = Math.round(old * (1 + p.growth / 100)); // next-year estimate
+  const change = ((newT - old) / old) * 100;
+  const ans = round1(change);
+  return {
+    topic: "Percentages & Profit/Loss",
+    question: `${p.business} had turnover of <b>₹${(old / 100000).toFixed(1)} lakh</b>. Analysts (fictionally) estimate next year it grows by <b>${p.growth}%</b>. What is the <b>percentage change</b> in turnover?`,
+    answer: ans,
+    choices: shuffleWithAnswer(ans, [round1(p.growth), round1(change / 2), round1(change * 2)]),
+    hint: `Percentage change = ((new − old) ÷ old) × 100. Use ${p.growth}% growth: new = old × (1 + ${p.growth}/100).`,
+    explain: `New = ₹${(old / 100000).toFixed(1)}L × (1 + ${p.growth}/100) = ₹${(newT / 100000).toFixed(1)}L. Change = ((${(newT / 100000).toFixed(1)} − ${(old / 100000).toFixed(1)}) ÷ ${(old / 100000).toFixed(1)}) × 100 = ${ans}%.`,
+  };
+}
+function qStatistics(seen) {
+  const margins = seen.map((p) => round1(fin.profitMargin(fin.profit(p.turnover, p.expenses), p.turnover)));
+  const avg = round1(fin.mean(margins));
+  return {
+    topic: "Statistics",
+    question: `You have seen <b>${seen.length} businesses</b>. Their profit margins are: <b>${margins.join("%, ")}%</b>. What is the <b>mean</b> profit margin?`,
+    answer: avg,
+    choices: shuffleWithAnswer(avg, [round1(avg + 3), round1(avg - 3), round1(avg * 2)]),
+    hint: "Mean = sum of all values ÷ number of values.",
+    explain: `Sum = ${margins.reduce((a, b) => a + b, 0).toFixed(1)}; Mean = ${margins.reduce((a, b) => a + b, 0).toFixed(1)} ÷ ${margins.length} ≈ ${avg}%.`,
+  };
+}
+function qMedian(seen) {
+  const profits = seen.map((p) => fin.profit(p.turnover, p.expenses) / 100000); // lakhs
+  const med = round1(fin.median(profits));
+  return {
+    topic: "Statistics",
+    question: `Annual profits (in ₹ lakh) of the businesses seen: <b>${profits.map((x) => x.toFixed(2)).join(", ")}</b>. What is the <b>median</b> profit?`,
+    answer: med,
+    choices: shuffleWithAnswer(med, [round1(med + 2), round1(med - 2), round1(fin.mean(profits) + 1)]),
+    hint: "Sort the values; the median is the middle value (or mean of the two middle values for an even count).",
+    explain: `Sorted, the middle of the list gives a median of ₹${med} lakh.`,
+  };
+}
+function qProbability(p) {
+  const ps = Math.round(p.pSuccess * 100);
+  const ev = p.investment * 0.5; // simplified EV demo
+  return {
+    topic: "Probability",
+    question: `${p.business} has a <b>${ps}%</b> chance of success and <b>${100 - ps}%</b> chance of decline. If success would return 150% of your investment and decline would return 20%, what is the expected return <b>as a percentage of the investment</b>?`,
+    answer: round1((ps / 100) * 150 + ((100 - ps) / 100) * 20),
+    choices: shuffleWithAnswer(round1((ps / 100) * 150 + ((100 - ps) / 100) * 20), [150, 20, round1((ps / 100) * 100)]),
+    hint: "Expected value = P(success) × 150 + P(decline) × 20.",
+    explain: `(${ps}/100) × 150 + (${100 - ps}/100) × 20 = ${round1((ps / 100) * 150)} + ${round1(((100 - ps) / 100) * 20)} = ${round1((ps / 100) * 150 + ((100 - ps) / 100) * 20)}%.`,
+  };
+}
+function qNumberSystems(p) {
+  const inv = p.investment;
+  return {
+    topic: "Number Systems",
+    question: `Express the investment request of <b>₹${inv.toLocaleString("en-IN")}</b> in lakhs (1 lakh = 100,000) and round to <b>2 decimal places</b>.`,
+    answer: round2(inv / 100000),
+    choices: shuffleWithAnswer(round2(inv / 100000), [round2(inv / 10000), round2(inv / 1000000), round2(inv / 100000 / 2)]),
+    hint: "Divide by 100,000 and keep two decimals.",
+    explain: `₹${inv.toLocaleString("en-IN")} ÷ 100,000 = ${round2(inv / 100000)} lakh.`,
+    answerIsLakhs: true,
+  };
+}
+function qCoordinate(p, others) {
+  // position of this business on turnover-profit plane
+  const profit = fin.profit(p.turnover, p.expenses);
+  const bigger = others.filter((o) => o.turnover > p.turnover).length;
+  return {
+    topic: "Coordinate Geometry",
+    question: `On a graph with <b>turnover on the x-axis</b> and <b>profit on the y-axis</b>, ${p.business} sits at approximately (<b>₹${(p.turnover / 100000).toFixed(0)}L</b>, <b>₹${(profit / 100000).toFixed(1)}L</b>). How many of the other ${others.length} businesses seen have a <b>higher turnover</b> (lie to the right of it)?`,
+    answer: bigger,
+    choices: shuffleWithAnswer(bigger, [others.length - bigger, 0, Math.ceil(others.length / 2)]),
+    hint: "Read the x-coordinates of every point and count those greater than this business's turnover.",
+    explain: `${bigger} of the ${others.length} businesses have a larger x-coordinate (turnover) than ₹${(p.turnover / 100000).toFixed(0)} lakh.`,
+  };
+}
+
+// helper: build 4 unique choices including the correct one, shuffled.
+// Removes duplicate distractors so exactly one option can be correct.
+function shuffleWithAnswer(correct, wrongs) {
+  const set = [correct];
+  const seenVals = new Set([String(correct)]);
+  for (const w of wrongs) {
+    if (set.length >= 4) break;
+    const key = String(w);
+    if (!seenVals.has(key)) { set.push(w); seenVals.add(key); }
+  }
+  let bump = 1;
+  while (set.length < 4) {
+    const cand = correct + bump;
+    if (!seenVals.has(String(cand))) { set.push(cand); seenVals.add(String(cand)); }
+    bump++;
+  }
+  return shuffle(set);
+}
+
+/* ---------------- 4. Game state ---------------- */
+let state = null;
+
+function newState() {
+  // Randomize order within tiers so difficulty still progresses overall.
+  const tiers = [[], [], []];
+  PITCHES.forEach((p) => tiers[p.tier - 1].push(p));
+  const order = shuffle(tiers[0]).concat(shuffle(tiers[1])).concat(shuffle(tiers[2]));
+  return {
+    order,
+    index: 0,
+    cash: START_CASH,
+    invested: 0,
+    holdings: [],          // {business, founder, invested, equityPct, value, status}
+    seen: [],              // pitch objects seen (for statistics questions)
+    mathCorrect: 0, mathWrong: 0, mathPoints: 0,
+    bizPoints: 0,
+    decisionLog: [],       // {pitch, action, good:boolean, note}
+    highRiskStreak: 0,
+    currentMath: null,
+    mathDone: false,
+    decided: false,
+    lastOutcome: null,
+    finished: false,
+  };
+}
+
+/* ---------------- 5. Screens & rendering ---------------- */
+const screens = ["menu", "how", "topics", "highscore", "pitch", "nego", "outcome", "portfolio", "end"];
+function show(name) {
+  screens.forEach((s) => $("screen-" + s).classList.toggle("active", s === name));
+  $("topbar").style.display = ["pitch", "nego", "outcome", "portfolio"].includes(name) ? "flex" : "none";
+  window.scrollTo({ top: 0 });
+}
+function toast(msg, isErr) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.toggle("err", !!isErr);
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+function updateHUD() {
+  if (!state) return;
+  $("hud-cash").textContent = inrFmt(state.cash);
+  $("hud-net").textContent = inrFmt(netWorth());
+  $("hud-pitch").textContent = `${Math.min(state.index + 1, state.order.length)}/${state.order.length}`;
+}
+
+function netWorth() { return state.cash + state.holdings.reduce((s, h) => s + h.value, 0); }
+
+/* ---- pitch screen ---- */
+function renderPitch() {
+  const p = state.order[state.index];
+  // record this pitch in history exactly once — powers statistics questions, graph, portfolio
+  if (!state.seen.includes(p)) state.seen.push(p);
+  $("pitch-desc").textContent = p.desc;
+  const profit = fin.profit(p.turnover, p.expenses);
+  const margin = fin.profitMargin(profit, p.turnover);
+  const valuation = fin.impliedValuation(p.investment, p.equity);
+  const invPct = fin.investVsTurnoverPct(p.investment, p.turnover);
+  const payback = fin.paybackYears(p.investment, p.equity, profit);
+
+  $("pitch-avatar").textContent = p.founder.trim()[0];
+  $("pitch-bus").textContent = p.business;
+  $("pitch-founder").textContent = p.founder + " · Founder";
+
+  const risk = p.pSuccess >= 0.6 ? ["low", "Low Risk"] : p.pSuccess >= 0.45 ? ["med", "Medium Risk"] : ["high", "High Risk"];
+  $("pitch-badges").innerHTML = `
+    <span class="badge ${risk[0]}"><span class="dot"></span>${risk[1]}</span>
+    <span class="badge">Tier ${p.tier}</span>
+    <span class="badge">Est. Growth ${p.growth}%</span>`;
+
+  const fins = [
+    ["Annual Turnover", inrFmt(p.turnover)],
+    ["Annual Expenses", inrFmt(p.expenses)],
+    ["Annual Profit", inrFmt(profit)],
+    ["Profit Margin", pctFmt(margin)],
+    ["Market Potential", pctFmt(p.marketPotential, 0)],
+    ["Investment Requested", inrFmt(p.investment), true],
+    ["Equity Offered", p.equity + "%"],
+    ["Implied Valuation", inrFmt(valuation)],
+  ];
+  $("pitch-fins").innerHTML = fins.map(([k, v, hero]) =>
+    `<div class="fin${hero ? " hero" : ""}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+
+  // analysis pills
+  const pills = [];
+  pills.push(margin >= 12 ? `<span class="pill good">Margin ${pctFmt(margin)} — healthy</span>` :
+    margin >= 5 ? `<span class="pill warn">Margin ${pctFmt(margin)} — thin</span>` :
+    `<span class="pill bad">Margin ${pctFmt(margin)} — weak/negative</span>`);
+  pills.push(`<span class="pill">Investment = <b>${pctFmt(invPct)}</b> of turnover</span>`);
+  pills.push(Number.isFinite(payback) && payback > 0
+    ? `<span class="pill">Payback ≈ <b>${round1(payback)} yrs</b> on current profit (if full share is distributed)</span>`
+    : `<span class="pill bad">No payback on current profit</span>`);
+  // Use the same shared two-scenario model as the outcome engine.
+  const a = analyzeOffer(p, p.investment, p.equity);
+  pills.push(`<span class="pill">P(success) = <b>${Math.round(p.pSuccess * 100)}%</b> · EV ≈ <b>${round1(a.expectedROI)}%</b></span>`);
+  pills.push(`<span class="pill">Success case ≈ <b>${inrFmt(a.successValue)}</b> · Decline case ≈ <b>${inrFmt(a.declineValue)}</b> (estimates)</span>`);
+  $("pitch-analysis").innerHTML = pills.join("");
+
+  renderGraph(p);
+  renderMath(p);
+  updateHUD();
+}
+
+/* --- coordinate geometry scatter graph (SVG) ---
+   Y-axis spans negative to positive profit so loss-making businesses plot correctly. */
+function renderGraph(current) {
+  const pts = state.seen.slice(); // history already includes current
+  const maxT = Math.max(...pts.map((p) => p.turnover)) * 1.1;
+  const pfs = pts.map((p) => fin.profit(p.turnover, p.expenses));
+  const maxP = Math.max(...pfs, 1) * 1.15;
+  const minP = Math.min(...pfs, 0) * 1.15; // negative when any business is loss-making
+  const W = 640, H = 300, L = 64, R = 16, T = 16, B = 40;
+  const X = (t) => L + (t / maxT) * (W - L - R);
+  const Y = (pf) => H - B - ((pf - minP) / (maxP - minP)) * (H - T - B);
+  const axisY = Y(0); // x-axis drawn at profit = 0
+  const grid = [];
+  for (let i = 0; i <= 4; i++) {
+    const t = (maxT / 4) * i;
+    grid.push(`<line x1="${X(t)}" y1="${T}" x2="${X(t)}" y2="${H - B}" stroke="rgba(255,255,255,.07)"/>`);
+    grid.push(`<text x="${X(t)}" y="${H - B + 16}" fill="#8a8e89" font-size="10" text-anchor="middle" font-family="JetBrains Mono,monospace">${(t / 100000).toFixed(0)}L</text>`);
+    const pf = minP + ((maxP - minP) / 4) * i;
+    grid.push(`<line x1="${L}" y1="${Y(pf)}" x2="${W - R}" y2="${Y(pf)}" stroke="rgba(255,255,255,.07)"/>`);
+    grid.push(`<text x="${L - 8}" y="${Y(pf) + 3}" fill="#8a8e89" font-size="10" text-anchor="end" font-family="JetBrains Mono,monospace">${(pf / 100000).toFixed(1)}L</text>`);
+  }
+  const dots = pts.map((p) => {
+    const pf = fin.profit(p.turnover, p.expenses);
+    const isCur = p === current;
+    return `<circle cx="${X(p.turnover)}" cy="${Y(pf)}" r="${isCur ? 6 : 4}"
+      fill="${isCur ? "#c8ff4d" : "rgba(242,243,241,.35)"}" stroke="${isCur ? "#c8ff4d" : "none"}"/>
+      ${isCur ? `<text x="${X(p.turnover) + 10}" y="${Y(pf) - 8}" fill="#c8ff4d" font-size="11" font-weight="600">${p.business}</text>` : ""}`;
+  }).join("");
+  $("graph-mount").innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter graph of turnover versus profit; the current business is highlighted">
+      ${grid}
+      <line x1="${L}" y1="${axisY}" x2="${W - R}" y2="${axisY}" stroke="rgba(255,255,255,.25)"/>
+      <line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" stroke="rgba(255,255,255,.25)"/>
+      <text x="${(L + W) / 2}" y="${H - 6}" fill="#8b8f8a" font-size="10" text-anchor="middle" letter-spacing="2">TURNOVER →</text>
+      <text x="14" y="${(T + H - B) / 2}" fill="#8b8f8a" font-size="10" text-anchor="middle" letter-spacing="2" transform="rotate(-90 14 ${(T + H - B) / 2})">PROFIT →</text>
+      ${dots}
+    </svg>
+    <p class="disclaimer">Upper-right = high turnover and high profit (promising). Dots are businesses you have seen this run.</p>`;
+}
+
+/* ---- math check ---- */
+function renderMath(p) {
+  state.mathDone = false;
+  const others = state.seen.filter((x) => x !== p);
+  // Deterministic topic schedule: every run covers all 6 CBSE topics.
+  // Statistics questions need >=2 businesses seen; fallbacks keep the first pitch simple.
+  const SCHEDULE = ["margin", "valuation", "linear", "probability", "pct", "number",
+                   "stats", "median", "coordinate", "turnoverChange", "valuation", "linear"];
+  const topic = SCHEDULE[state.index % SCHEDULE.length];
+  const need2 = others.length >= 2;
+  const need1 = others.length >= 1;
+  const generators = {
+    margin: () => qProfitMargin(p),
+    pct: () => qProfitPct(p),
+    valuation: () => qValuation(p),
+    linear: () => qLinear(p),
+    number: () => qNumberSystems(p),
+    probability: () => qProbability(p),
+    stats: () => (need2 ? qStatistics(state.seen) : qProfitMargin(p)),
+    median: () => (need2 ? qMedian(state.seen) : qValuation(p)),
+    coordinate: () => (need1 ? qCoordinate(p, others) : qValuation(p)),
+    turnoverChange: () => qTurnoverChange(p),
+  };
+  state.currentMath = generators[topic]();
+
+  const q = state.currentMath;
+  $("math-topic-badge").textContent = q.topic;
+  $("math-q").innerHTML = q.question;
+  const letters = ["A", "B", "C", "D"];
+  $("math-choices").innerHTML = q.choices.map((c, i) =>
+    `<button class="choice" data-i="${i}"><span class="key">${letters[i]}</span><span class="mono">${q.answerIsLakhs ? c + " lakh" : c}</span></button>`).join("");
+  $("math-feedback").className = "math-feedback";
+  $("math-feedback").innerHTML = "";
+  $("math-hint").className = "hintbox";
+  $("math-hint").textContent = "";
+  $("math-hint-btn").style.display = "";
+  $("math-hint-btn").disabled = false;
+
+  document.querySelectorAll("#math-choices .choice").forEach((btn) => {
+    btn.addEventListener("click", () => onMathAnswer(parseInt(btn.dataset.i, 10)));
+  });
+}
+
+function onMathAnswer(i) {
+  if (state.mathDone) return;
+  const q = state.currentMath;
+  const correct = q.choices[i] === q.answer;
+  const fb = $("math-feedback");
+  const choiceBtns = document.querySelectorAll("#math-choices .choice");
+
+  if (correct) {
+    state.mathDone = true;
+    state.mathCorrect++;
+    const pts = 50;
+    state.mathPoints += pts;
+    choiceBtns.forEach((b, j) => {
+      b.disabled = true;
+      if (j === i) b.classList.add("correct");
+    });
+    fb.className = "math-feedback show ok";
+    fb.innerHTML = `<div class="verdict">Correct · +${pts} points</div><div class="explain">${q.explain}</div>`;
+    $("math-hint-btn").style.display = "none";
+    $("math-hint").className = "hintbox";
+  } else {
+    state.mathWrong++;
+    state.mathPoints = Math.max(0, state.mathPoints - 10);
+    choiceBtns[i].classList.add("wrong");
+    choiceBtns[i].disabled = true;
+    fb.className = "math-feedback show no";
+    fb.innerHTML = `<div class="verdict">Not quite · −10 points</div><div class="explain">Here are the steps: ${q.hint.replace(/^Hint: /, "")}</div>`;
+  }
+}
+
+$("math-hint-btn").addEventListener("click", () => {
+  if (!state || !state.currentMath) return;
+  $("math-hint").textContent = "Hint: " + state.currentMath.hint;
+  $("math-hint").classList.add("show");
+  $("math-hint-btn").disabled = true;
+});
+
+/* ---- negotiation screen ---- */
+function openNego() {
+  if (!state.mathDone) { toast("Solve the Math Check first.", true); return; }
+  const p = state.order[state.index];
+  $("nego-title").textContent = "Counter-Offer — " + p.business;
+  $("nego-sub").textContent = `${p.founder} asked for ${inrFmt(p.investment)} for ${p.equity}% equity. Make a different offer.`;
+  $("nego-amt").value = p.investment;
+  $("nego-eq").value = p.equity;
+  $("nego-amt-err").textContent = "";
+  $("nego-eq-err").textContent = "";
+  $("nego-verdict").className = "nego-verdict";
+  $("nego-verdict").innerHTML = "";
+  updateNegoLive();
+  show("nego");
+  $("nego-amt").focus();
+}
+function updateNegoLive() {
+  const p = state.order[state.index];
+  const amt = parseAmt($("nego-amt").value);
+  const eq = parseEquity($("nego-eq").value);
+  let html = "Implied valuation: <b>—</b> (enter a valid amount and equity)";
+  if (Number.isFinite(amt) && amt > 0 && Number.isFinite(eq) && eq > 0 && eq <= 100) {
+    const v = fin.impliedValuation(amt, eq);
+    const a = analyzeOffer(p, amt, eq);
+    html = `Implied valuation: <b>${inrFmt(v)}</b> · Payback ≈ <b>${Number.isFinite(a.paybackYears) ? round1(a.paybackYears) + " yrs" : "never"}</b> · Expected ROI ≈ <b>${round1(a.expectedROI)}%</b> · Cash left: <b>${inrFmt(Math.max(0, state.cash - amt))}</b>`;
+  }
+  $("nego-live").innerHTML = html;
+}
+// Strict whole-string validation: only plain digit strings (with optional commas) pass.
+// Rejects negatives (the − sign survives the regex), decimals, junk like "abc5000".
+function parseAmt(s) {
+  const raw = String(s == null ? "" : s).trim().replace(/,/g, "");
+  if (!/^\d+$/.test(raw)) return NaN;
+  const n = Number(raw);
+  return Number.isSafeInteger(n) ? n : NaN;
+}
+// Strict decimal validation for equity (e.g. "12.5") — rejects trailing junk.
+function parseEquity(s) {
+  const raw = String(s == null ? "" : s).trim();
+  if (!/^\d+(\.\d+)?$/.test(raw)) return NaN;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : NaN;
+}
+["nego-amt", "nego-eq"].forEach((id) => $(id).addEventListener("input", updateNegoLive));
+$("nego-back").addEventListener("click", () => show("pitch"));
+
+$("nego-send").addEventListener("click", () => {
+  const p = state.order[state.index];
+  const amtErr = $("nego-amt-err"), eqErr = $("nego-eq-err");
+  amtErr.textContent = ""; eqErr.textContent = "";
+
+  const amt = parseAmt($("nego-amt").value);
+  const eq = parseEquity($("nego-eq").value);
+
+  // validation
+  if (!Number.isFinite(amt) || amt <= 0) { amtErr.textContent = "Enter a positive whole amount in rupees (digits only)."; return; }
+  if (!Number.isFinite(eq) || eq <= 0 || eq > 100) { eqErr.textContent = "Equity must be a number between 0.1 and 100."; return; }
+  if (amt % 1000 !== 0) { amtErr.textContent = "Round to the nearest ₹1,000."; return; }
+  if (amt > state.cash) { amtErr.textContent = `You only have ${inrFmt(state.cash)} in cash.`; return; }
+
+  const v = $("nego-verdict");
+  // founder's decision logic (deterministic):
+  // value ratio = implied valuation vs founder's fair value, adjusted for equity demands
+  const valuation = fin.impliedValuation(amt, eq);
+  const ratio = valuation / p.valuationFair;             // >1 = generous offer
+  const equityGiven = eq / p.maxEquityGive;              // >1 = asking too much equity
+  let accept = ratio >= 0.85 && eq <= p.maxEquityGive && amt >= p.minFund * 0.8;
+
+  if (accept) {
+    // Commit the deal synchronously — no delayed timer that can race navigation.
+    v.className = "nego-verdict show ok";
+    v.innerHTML = `<b>${p.founder} accepts!</b> Deal: ${inrFmt(amt)} for ${eq}% equity (valuation ${inrFmt(valuation)}).`;
+    finalizeInvest(amt, eq, true);
+  } else {
+    // explain why, without revealing exact limits
+    v.className = "nego-verdict show no";
+    let why;
+    if (eq > p.maxEquityGive) why = `${p.founder} won't give away ${eq}% — that's more control than this founder will sell.`;
+    else if (valuation < p.valuationFair * 0.6) why = `A valuation of ${inrFmt(valuation)} is too far below what ${p.founder} believes the business is worth.`;
+    else if (amt < p.minFund * 0.8) why = `The plan doesn't work with only ${inrFmt(amt)} — ${p.founder} needs a bigger cheque to execute it.`;
+    else why = `${p.founder} politely declines this structure.`;
+    v.innerHTML = `<b>Counter-offer rejected.</b> ${why} You can revise and try again, or walk away.`;
+  }
+});
+
+$("nego-giveup").addEventListener("click", () => {
+  if (!state.mathDone) return;
+  finalizeReject(true);
+});
+
+/* ---- portfolio ---- */
+function renderPortfolio() {
+  const n = state.holdings.length;
+  // portOrigin is already set by the brand handler; only default if missing.
+  if (!state.portOrigin) state.portOrigin = "screen-pitch";
+  const wins = state.holdings.filter((h) => h.value > h.invested).length;
+  const losses = state.holdings.filter((h) => h.value < h.invested).length;
+  const portVal = state.holdings.reduce((s, h) => s + h.value, 0);
+  const roi = state.invested > 0 ? fin.roiPct(portVal, state.invested) : 0;
+  $("port-summary").innerHTML = [
+    ["Available Cash", inrFmt(state.cash)],
+    ["Total Invested", inrFmt(state.invested)],
+    ["Deals Won / Lost", `${wins} / ${losses}`],
+    ["Portfolio Value", inrFmt(portVal)],
+    ["Portfolio ROI", pctFmt(roi)],
+    ["Net Worth", inrFmt(netWorth())],
+  ].map(([k, v]) => `<div class="fin"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+
+  $("port-holdings").innerHTML = n === 0
+    ? `<p class="empty-note">No investments yet — the cage is waiting.</p>`
+    : `<div style="overflow-x:auto"><table class="hold-table"><thead><tr><th>Business</th><th>Invested</th><th>Equity</th><th>Value</th><th>Status</th></tr></thead><tbody>${state.holdings.map((h) => `
+        <tr><td class="bus">${h.business}</td><td class="num">${inrFmt(h.invested)}</td><td class="num">${h.equityPct}%</td>
+        <td class="num ${h.value >= h.invested ? "pos" : "neg"}">${inrFmt(h.value)}</td>
+        <td>${h.value > h.invested ? '<span class="pos">▲</span>' : h.value < h.invested ? '<span class="neg">▼</span>' : "—"}</td></tr>`).join("")}</tbody></table></div>`;
+
+  // statistics of businesses seen (live CBSE statistics)
+  const seen = state.seen;
+  if (seen.length === 0) {
+    $("port-stats").innerHTML = `<p class="empty-note">You haven't seen any pitches yet.</p>`;
+  } else {
+    const turnovers = seen.map((p) => p.turnover);
+    const profits = seen.map((p) => fin.profit(p.turnover, p.expenses));
+    const margins = seen.map((p) => fin.profitMargin(fin.profit(p.turnover, p.expenses), p.turnover));
+    const rows = [
+      ["Mean annual turnover", inrFmt(fin.mean(turnovers))],
+      ["Median annual profit", inrFmt(fin.median(profits))],
+      ["Highest turnover", inrFmt(Math.max(...turnovers)) + " (" + seen.find((p) => p.turnover === Math.max(...turnovers)).business + ")"],
+      ["Lowest turnover", inrFmt(Math.min(...turnovers)) + " (" + seen.find((p) => p.turnover === Math.min(...turnovers)).business + ")"],
+      ["Mean profit margin", pctFmt(fin.mean(margins))],
+      ["Businesses seen", String(seen.length)],
+    ];
+    $("port-stats").innerHTML = `<table class="hs-table">${rows.map(([k, v]) => `<tr><td class="muted">${k}</td><td>${v}</td></tr>`).join("")}</table>`;
+  }
+  updateHUD();
+}
+$("port-back").addEventListener("click", () => show(portReturnName()));
+$("port-continue").addEventListener("click", () => show(portReturnName()));
+// Return to the screen the player came from — never strand them on a decided pitch.
+function portReturnName() {
+  if (!state) return "menu";
+  if (state.finished) return "end";
+  // strip the "screen-" prefix; fall back to pitch
+  const origin = state.portOrigin || "screen-pitch";
+  const name = origin.replace(/^screen-/, "");
+  return screens.includes(name) ? name : "pitch";
+}
+
+/* ---------------- 6. Decision engine ---------------- */
+$("btn-invest").addEventListener("click", () => {
+  if (!state || state.decided) return;
+  if (!state.mathDone) { toast("Solve the Math Check first.", true); return; }
+  const p = state.order[state.index];
+  if (p.investment > state.cash) {
+    state.bizPoints = Math.max(0, state.bizPoints - 25);
+    toast(`Not enough cash — you have ${inrFmt(state.cash)}, the ask is ${inrFmt(p.investment)}. −25 points for an invalid attempt.`, true);
+    return;
+  }
+  finalizeInvest(p.investment, p.equity, false);
+});
+$("btn-reject").addEventListener("click", () => {
+  if (!state || state.decided) return;
+  if (!state.mathDone) { toast("Solve the Math Check first.", true); return; }
+  finalizeReject(false);
+});
+$("btn-negotiate").addEventListener("click", openNego);
+
+/** Shared offer-analysis model. One function drives the pitch pill, negotiation
+ *  preview, decision scoring, rejection explanations, and the outcome engine.
+ *  Fictional two-scenario projection built from turnover, profit, market
+ *  potential, growth, and risk — all estimated values, not guarantees. */
+function projectBusiness(p) {
+  const profit = fin.profit(p.turnover, p.expenses);
+  const margin = fin.profitMargin(profit, p.turnover);
+  // Base value: a multiple of annual profit, adjusted for market potential/growth.
+  // Healthy margins and big markets justify higher multiples (all estimates).
+  const profitMultiple = clamp(4 + margin / 5, 2, 12);
+  const marketFactor = 1 + (p.marketPotential / 100) * 0.8 + (p.growth / 100) * 0.4;
+  const baseValuation = Math.max(profit, 0) * profitMultiple * marketFactor;
+  // Decline: value compresses toward a fraction of base, worse for weak margins.
+  const declineValuation = baseValuation * (0.2 + clamp(margin / 20, 0.05, 0.5) * 0.6);
+  return {
+    profit, margin,
+    successValuation: Math.max(baseValuation, p.turnover * 0.3),
+    declineValuation,
+  };
+}
+
+/** Expected holding value and ROI for a specific offer (amount, equity).
+ *  Uses the same shared projection as the outcome engine. */
+function analyzeOffer(p, amount, equityPct) {
+  const s = projectBusiness(p);
+  const successValue = fin.equityValue(s.successValuation, equityPct);
+  const declineValue = fin.equityValue(s.declineValuation, equityPct);
+  const expectedValue = p.pSuccess * successValue + (1 - p.pSuccess) * declineValue;
+  return {
+    successValue, declineValue, expectedValue,
+    expectedROI: amount > 0 ? ((expectedValue / amount) - 1) * 100 : 0,
+    impliedValuation: fin.impliedValuation(amount, equityPct),
+    paybackYears: fin.paybackYears(amount, equityPct, s.profit),
+  };
+}
+
+/** Determine whether this pitch was a sensible deal given pre-decision evidence. */
+function judgeDecision(p, invested, equity) {
+  const profit = fin.profit(p.turnover, p.expenses);
+  const margin = fin.profitMargin(profit, p.turnover);
+  const valuation = fin.impliedValuation(invested, equity);
+  const s = projectBusiness(p);
+  const fairValue = s.successValuation;
+  const valuationRatio = valuation / Math.max(1, fairValue);
+  const analysis = analyzeOffer(p, invested, equity);
+  const evMultiple = analysis.expectedROI; // % return expected
+  const reasons = [];
+  let good = true;
+
+  if (margin < 2) { reasons.push("profit margin is weak (" + pctFmt(margin) + ")"); good = false; }
+  else if (margin < 6) reasons.push("profit margin is thin (" + pctFmt(margin) + ")");
+  else reasons.push("profit margin is healthy (" + pctFmt(margin) + ")");
+
+  if (valuationRatio > 1.6) { reasons.push("you paid well above fair value (" + round1(valuationRatio) + "× fair value)"); good = false; }
+  else if (valuationRatio < 0.8) reasons.push("you negotiated below fair value (" + round1(valuationRatio) + "×)");
+  else reasons.push("valuation was close to fair value (" + round1(valuationRatio) + "×)");
+
+  if (p.pSuccess < 0.4) { reasons.push("success probability was low (" + Math.round(p.pSuccess * 100) + "%)"); good = false; }
+  else reasons.push("success probability was " + Math.round(p.pSuccess * 100) + "%");
+
+  if (evMultiple < 0) { reasons.push("expected return (" + pctFmt(evMultiple) + ") was negative"); good = false; }
+  else if (evMultiple < 15) reasons.push("expected return was thin (" + pctFmt(evMultiple) + ")");
+  else reasons.push("expected return ≈ " + pctFmt(evMultiple));
+
+  return { good, reasons: reasons.join("; "), ev: evMultiple / 100 + 1, valuationRatio, analysis };
+}
+
+/** Finalize an investment (also used by accepted negotiation). */
+function finalizeInvest(amount, equityPct, viaNego) {
+  if (state.decided) return;
+  const p = state.order[state.index];
+  // Revalidate inside finalizeInvest — do not rely on callers alone.
+  if (amount > state.cash || amount <= 0 || equityPct <= 0 || equityPct > 100) {
+    toast("Invalid investment — rejected.", true);
+    return;
+  }
+  state.decided = true;
+
+  state.cash -= amount;
+  state.invested += amount;
+
+  // Outcome: probability-weighted branch between the two fixed scenarios.
+  const success = Math.random() < p.pSuccess;
+  const profit = fin.profit(p.turnover, p.expenses);
+  const scenario = projectBusiness(p); // shared projection model (see above)
+  const valuationNow = success ? scenario.successValuation : scenario.declineValuation;
+  const equityValue = fin.equityValue(valuationNow, equityPct);
+  const judgment = judgeDecision(p, amount, equityPct);
+
+  // business points: rewarded for evidence-aligned decisions
+  let pts = 0;
+  if (judgment.good) pts += 100; else pts -= 40;
+  if (viaNego && judgment.valuationRatio <= 1.1 && judgment.valuationRatio >= 0.7) pts += 40; // good negotiation
+  if (viaNego && judgment.valuationRatio > 1.5) pts -= 30; // overpaid in negotiation
+  // diversification: penalize concentrating too much deployed capital in one deal
+  const investedBeforeThis = state.invested; // already includes this deal
+  if (investedBeforeThis > 0 && amount / investedBeforeThis > 0.5 && state.holdings.length > 0) pts -= 15;
+  // diversification bonus: reward spreading across many deals (4+ holdings)
+  if (state.holdings.length === 3) pts += 25;
+  // high-risk concentration by capital: >60% of capital in <40% success pitches
+  const riskyCapital = state.holdings.filter(h => h.risky).reduce((s, h) => s + h.invested, 0) + (p.pSuccess < 0.4 ? amount : 0);
+  if (riskyCapital / Math.max(1, state.invested) > 0.6) pts -= 20;
+
+  state.bizPoints += pts;
+
+  state.holdings.push({
+    business: p.business, founder: p.founder, invested: amount,
+    equityPct, value: Math.round(equityValue), status: success ? "success" : "decline",
+    risky: p.pSuccess < 0.4,
+  });
+  state.decisionLog.push({ pitch: p.business, action: "invest", good: judgment.good, note: judgment.reasons });
+
+  renderOutcome({
+    tag: success ? "win" : "loss",
+    head: success ? "The bet paid off" : "The business struggled",
+    num: inrFmt(Math.round(equityValue)) + " holding value",
+    body: `<b>${p.business}</b> ${success
+      ? `beat expectations. The business is now valued around ${inrFmt(valuationNow)} (estimate), and your ${equityPct}% stake is worth <b>${inrFmt(Math.round(equityValue))}</b> against your ${inrFmt(amount)} investment.`
+      : `hit headwinds. Its value fell to around ${inrFmt(valuationNow)} (estimate); your ${equityPct}% stake is now worth <b>${inrFmt(Math.round(equityValue))}</b>.`}`,
+    ledger: [
+      ["Invested", inrFmt(amount)],
+      ["Equity acquired", equityPct + "%"],
+      ["Resulting value", inrFmt(Math.round(equityValue))],
+      ["Return", (equityValue >= amount ? "+" : "") + inrFmt(Math.round(equityValue - amount))],
+      ["Business points", (pts >= 0 ? "+" : "") + pts],
+      ["Why this verdict", judgment.reasons],
+    ],
+    mathNote: judgment.good
+      ? "Gorilla's verdict: you backed the financial evidence. That's what the cage rewards."
+      : "Gorilla's verdict: the numbers were shaky before you invested — riskier than it looked.",
+  });
+}
+
+function finalizeReject(viaNego) {
+  if (state.decided) return;
+  const p = state.order[state.index];
+  state.decided = true;
+
+  const profit = fin.profit(p.turnover, p.expenses);
+  const margin = fin.profitMargin(profit, p.turnover);
+  const valuation = fin.impliedValuation(p.investment, p.equity);
+  const s = projectBusiness(p);
+  // Use the same shared model to judge rejection. A rejection is "good" when
+  // the expected return is poor, the ask is overpriced, or the margin is too weak.
+  // If the ask exceeds the player's available cash, rejection is the only sensible call.
+  const analysis = analyzeOffer(p, p.investment, p.equity);
+  const ev = analysis.expectedROI; // % expected return
+  const unaffordable = p.investment > state.cash;
+  const good = unaffordable || ev < 15 || valuation > s.successValuation * 1.6 || margin < 4;
+  let pts = good ? 60 : -30; // passing on a decent deal has an opportunity cost
+  state.bizPoints += pts;
+  state.decisionLog.push({ pitch: p.business, action: "reject", good, note: good ? "sensible pass" : "passed on a solid deal" });
+
+  renderOutcome({
+    tag: good ? "pass" : "loss",
+    head: good ? "You sent them home" : "You let a good one walk",
+    num: "No deal",
+    body: `<b>${p.founder}</b> leaves the cage${viaNego ? " after failed negotiations" : ""}. ${good
+      ? (unaffordable
+        ? `With only ${inrFmt(state.cash)} in cash against a ${inrFmt(p.investment)} ask, rejection was the only sensible call — you could not fund this deal.`
+        : `With an expected return of ${pctFmt(ev)} and a ${Math.round(p.pSuccess * 100)}% success probability, keeping your ${inrFmt(p.investment)} was the evidence-based call.`)
+      : `The numbers actually favoured this deal (expected return ${pctFmt(ev)}, ${Math.round(p.pSuccess * 100)}% success probability) — sometimes the cage punishes caution.`}`,
+    ledger: [
+      ["Cash preserved", inrFmt(p.investment)],
+      ["Opportunity", "declined"],
+      ["Business points", (pts >= 0 ? "+" : "") + pts],
+      ["Gorilla's verdict", good ? "Disciplined rejection" : "Missed opportunity"],
+    ],
+    mathNote: good
+      ? "Math backing: expected value and margin analysis supported walking away."
+      : "Math backing: the expected value was positive — rejection cost you points.",
+  });
+}
+
+function renderOutcome(o) {
+  const tag = $("outcome-tag");
+  tag.className = "outcome-tag " + o.tag;
+  tag.textContent = o.tag === "win" ? "Deal Result — Win" : o.tag === "loss" ? "Deal Result — Loss" : "Deal Result";
+  $("outcome-head").textContent = o.head;
+  $("outcome-num").textContent = o.num;
+  $("outcome-body").innerHTML = o.body + (o.mathNote ? `<br><br><span class="verdict-note">${o.mathNote}</span>` : "");
+  $("outcome-ledger").innerHTML = o.ledger.map(([k, v]) => `<tr><td class="ledger-lbl">${k}</td><td>${v}</td></tr>`).join("");
+  $("outcome-next").textContent = state.index >= state.order.length - 1 ? "See Final Results →" : "Next Entrepreneur →";
+  show("outcome");
+  updateHUD();
+  state.lastOutcome = o;
+}
+
+$("outcome-next").addEventListener("click", () => {
+  if (!state) return;
+  state.index++;
+  state.decided = false;
+  state.mathDone = false;
+  state.portOrigin = null; // reset portfolio origin for the new pitch
+  if (state.index >= state.order.length) {
+    finishGame();
+  } else {
+    renderPitch();
+    show("pitch");
+  }
+});
+
+/* ---------------- 7. End screen & scoring ---------------- */
+function finishGame() {
+  state.finished = true;
+  const nw = netWorth();
+  const total = state.mathPoints + state.bizPoints + Math.round((nw - START_CASH) / 10000);
+  const wins = state.holdings.filter((h) => h.value > h.invested);
+  const losses = state.holdings.filter((h) => h.value < h.invested);
+  // best/worst across ALL holdings — even a losing portfolio has a best deal, and
+  // an all-winning portfolio still has a worst deal (relative return).
+  const best = state.holdings.length
+    ? state.holdings.reduce((a, b) => (b.value - b.invested > a.value - a.invested ? b : a)) : null;
+  const worst = state.holdings.length
+    ? state.holdings.reduce((a, b) => (b.value - b.invested < a.value - a.invested ? b : a)) : null;
+
+  const verdict = nw >= START_CASH * 1.3 ? "A dominant run — the cage bows to you."
+    : nw >= START_CASH ? "You survived the cage with a profit."
+    : nw >= START_CASH * 0.7 ? "A bruising run — the cage took its toll."
+    : "The cage mauled you. Study the numbers and come back.";
+
+  $("end-head").textContent = "The Cage Is Empty";
+  $("end-sub").textContent = `12 pitches. ${state.holdings.length} ${state.holdings.length === 1 ? "deal" : "deals"}. Final verdict: ${verdict}`;
+
+  $("end-stats").innerHTML = [
+    ["Final Net Worth", inrFmt(nw)],
+    ["Profit / Loss", (nw >= START_CASH ? "+" : "") + inrFmt(nw - START_CASH)],
+    ["Math Score", `${state.mathCorrect} correct / ${state.mathWrong} wrong · ${state.mathPoints} pts`],
+    ["Business Score", `${state.bizPoints} pts`],
+    ["Total Score", `${total} pts`],
+  ].map(([k, v]) => `<div class="fin"><div class="k">${k}</div><div class="v" style="font-size:15px">${v}</div></div>`).join("");
+
+  const bw = $("end-bw");
+  bw.innerHTML = `
+    <div class="bw best"><div class="t">Best Investment</div>
+      ${best ? `<div class="n">${best.business} · ${best.equityPct}% for ${inrFmt(best.invested)}</div><div class="r">${best.value - best.invested >= 0 ? "+" : "−"}${inrFmt(Math.abs(best.value - best.invested))}</div>` : `<div class="n muted">No investments this run.</div><div class="r">—</div>`}
+    </div>
+    <div class="bw worst"><div class="t">Worst Investment</div>
+      ${worst ? `<div class="n">${worst.business} · ${worst.equityPct}% for ${inrFmt(worst.invested)}</div><div class="r">${worst.value - worst.invested >= 0 ? "+" : "−"}${inrFmt(Math.abs(worst.value - worst.invested))}</div>` : `<div class="n muted">No investments this run.</div><div class="r">—</div>`}
+    </div>`;
+
+  const hsBox = $("end-newhs");
+  const saved = saveHighScore(total, nw);
+  hsBox.className = "new-hs" + (saved ? " show" : "");
+  if (saved) hsBox.textContent = `New high score: ${total} points. The jungle remembers.`;
+
+  show("end");
+  updateHUD();
+}
+$("end-restart").addEventListener("click", startGame);
+
+/* ---------------- 8. High scores (guarded localStorage) ---------------- */
+const HS_KEY = "gorilla-cage-hs-v1";
+function loadHighScores() {
+  try {
+    const raw = window.localStorage.getItem(HS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function saveHighScore(total, netWorthValue) {
+  try {
+    const list = loadHighScores();
+    list.push({ score: total, netWorth: Math.round(netWorthValue), date: new Date().toISOString().slice(0, 10) });
+    list.sort((a, b) => b.score - a.score);
+    const top = list.slice(0, 5);
+    window.localStorage.setItem(HS_KEY, JSON.stringify(top));
+    return top[0] && top[0].score === total && list.filter((x) => x.score === total).length === 1;
+  } catch { return false; }
+}
+function renderHighScores() {
+  const list = loadHighScores();
+  $("hs-list").innerHTML = list.length === 0
+    ? `<p class="empty-note">No runs yet — enter the cage to set the first high score.</p>`
+    : `<table class="hs-table">${list.map((r, i) => `<tr><td class="muted">#${i + 1} · ${r.date}</td><td>${r.score} pts · NW ${inrFmt(r.netWorth)}</td></tr>`).join("")}</table>`;
+  const best = list[0];
+  $("menu-hs").innerHTML = best ? `Best score: <b>${best.score} points</b>` : "No high score yet — be the first Gorilla.";
+}
+
+/* ---------------- navigation ---------------- */
+function startGame() {
+  state = newState();
+  state.portOrigin = null; // reset so each run captures fresh origins
+  renderPitch();
+  show("pitch");
+  updateHUD();
+}
+document.querySelectorAll("[data-nav]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const dest = btn.dataset.nav;
+    if (dest === "start") startGame();
+    else if (dest === "highscore") { renderHighScores(); show("highscore"); }
+    else if (dest === "menu") { state = null; renderHighScores(); show("menu"); }
+    else show(dest);
+  });
+});
+// topbar brand opens portfolio — one handler captures the origin BEFORE switching.
+$("brand-open-portfolio").addEventListener("click", () => {
+  if (!state) return;
+  const current = document.querySelector(".screen.active")?.id || "screen-pitch";
+  state.portOrigin = current; // remember where the player came from
+  renderPortfolio();
+  show("portfolio");
+});
+
+/* first paint */
+renderHighScores();
+show("menu");
+
+// QA/testing hook: exposes the current math question read-only.
+// Not used by gameplay — lets automated tests verify question correctness.
+if (typeof window !== "undefined") {
+  window.__qa = {
+    currentMath: () => (state && state.currentMath) ? state.currentMath : null,
+    state: () => ({
+      index: state ? state.index : null,
+      cash: state ? state.cash : null,
+      mathDone: state ? state.mathDone : null,
+      decided: state ? state.decided : null,
+      pitch: state ? state.order[state.index]?.business : null,
+      pSuccess: state ? state.order[state.index]?.pSuccess : null,
+    }),
+  };
+}
+</script>
+</body>
+</html>
